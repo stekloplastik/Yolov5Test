@@ -151,7 +151,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
 
 
 def main():
-    check_requirements(exclude=('tensorboard', 'thop'))
     run()
 
 
