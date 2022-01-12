@@ -1,27 +1,22 @@
 from pathlib import Path
-import re
 
 import cv2
-import torch
-import torch.backends.cudnn as cudnn
 import numpy as np
-
+import torch
 
 from models.common import DetectMultiBackend
-from utils.datasets import IMG_FORMATS, VID_FORMATS, LoadImages, LoadStreams
-from utils.general import (LOGGER, check_file, check_img_size,
-                           non_max_suppression, scale_coords)
-from utils.plots import Annotator, colors
-from utils.torch_utils import time_sync
 from utils.augmentations import letterbox
+from utils.general import LOGGER, non_max_suppression, scale_coords
+from utils.plots import Annotator, colors
+
 
 def initialize_model(weights, device):
     model = DetectMultiBackend(weights, device=device, dnn=False)
     return model
 
-def initialize_reader(source, model):
+def initialize_reader(source):
     if source == '0':
-        source=int(source)
+        source = int(source)
         cap = cv2.VideoCapture(source)
     else:
         cap = cv2.VideoCapture(source)
@@ -32,16 +27,14 @@ def initialize_writer():
     pass
 
 
-def get_frame(reader, source):
+def get_frame(reader):
     for i in range(10):
         reader.read()
     ret, img = reader.read()
     return ret, img
 
-def preparation_frame(frame):
-    frame = [frame]
-    # im = frame
-    im0s = frame.copy()
+def prepare_frame(frame, imgsz, device):
+    im0s = [frame.copy()]
     
     im = [letterbox(x, imgsz, stride=32, auto=True)[0] for x in im0s]
 
@@ -58,19 +51,24 @@ def preparation_frame(frame):
         im = im[None]  # expand for batch dim
     return im
 
-def show_result(model, view_img, source, im, imgsz, frame):
-    names = model.names
+def definition_of_predictions(model, im, imgsz):
     model.warmup(imgsz=(1, 3, imgsz), half=False)  # warmup
-    path = source
-    im = im
-    im0s = [frame.copy()]
-    s = ''
-
     # Inference
     pred = model(im, augment=False, visualize=False)
 
     # NMS
     pred = non_max_suppression(pred, conf_thres=0.25, iou_thres=0.45, classes=None, max_det=100)
+    print(pred)
+    return pred
+
+
+def show_result(model, view_img, source, im, frame, pred):
+    names = model.names
+    path = source
+    im = im
+    im0s = [frame.copy()]
+    s = ''
+
     # Process predictions
     for i, det in enumerate(pred):  # per image
             if source == '0':  # batch_size >= 1
@@ -109,15 +107,16 @@ def show_result(model, view_img, source, im, imgsz, frame):
 
 def main(source, device, weights, view_img, imgsz):
     model = initialize_model(weights, device)
-    reader = initialize_reader(source, model)
+    reader = initialize_reader(source)
     # writer = initialize_writer(...params...) // Этот не очень нужен, но можно оставить.
 
     while True:
-        ret, frame = get_frame(reader, source)
+        ret, frame = get_frame(reader)
         if not ret:
             break
-        im = preparation_frame(frame)
-        show_result(model, view_img, source, im, imgsz, frame)
+        im = prepare_frame(frame, imgsz, device)
+        pred = definition_of_predictions(model, im, imgsz)
+        show_result(model, view_img, source, im, frame, pred)
 
 if __name__ == "__main__":
     source='0'

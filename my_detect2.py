@@ -48,13 +48,12 @@ def show_result(source, imgsz, device, weights, view_img):
     model.warmup(imgsz=(1, 3, imgsz), half=False)  # warmup
     print(dataset)
     for path, im, im0s, vid_cap, s in dataset:
-        print(im)
         im = torch.from_numpy(im).to(device)
         im = im.float()  # uint8 to fp16/32
         im /= 255  # 0 - 255 to 0.0 - 1.0
         if len(im.shape) == 3:
             im = im[None]  # expand for batch dim
-        # print(im)
+        print(im)
         # Inference
         pred = model(im, augment=False, visualize=False)
 
